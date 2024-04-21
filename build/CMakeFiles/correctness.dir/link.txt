@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/correctness.dir/correctness.cc.o CMakeFiles/correctness.dir/kvstore.cc.o CMakeFiles/correctness.dir/skiplist.cc.o CMakeFiles/correctness.dir/cachedData.cc.o CMakeFiles/correctness.dir/vlog.cc.o -o correctness 
