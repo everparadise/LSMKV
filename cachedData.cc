@@ -78,7 +78,7 @@ namespace cached
 
     CachedSST::~CachedSST()
     {
-        for (std::vector<element>::iterator it = cachedHead.begin(); it != cachedHead.end(); it++)
+        for (std::vector<element>::iterator it = cachedHead.begin(); it != cachedHead.end();)
         {
             auto [ptr1, ptr2] = *it;
             delete[] ptr1;

@@ -83,6 +83,7 @@ namespace VLog
             totalLength += 12 + length;
             curr = curr->forward[1];
         }
+        header = ftell(vLogFile);
         fseek(vLogFile, start + 3, SEEK_SET);
         // char ptr[totalLength + 1];
         // fread(ptr, totalLength, 1, vLog);
