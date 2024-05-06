@@ -1,3 +1,4 @@
+// define.h
 #ifndef DEFINE_H
 #define DEFINE_H
 
@@ -7,7 +8,7 @@
 #define PROB 0.25
 
 // bloomfilter arguement
-#define HASHNUM 5
+#define HASHNUM 8
 #define FILTERSIZE 8192
 
 // sstable tuple start
@@ -15,6 +16,8 @@
 #define BLOOMSTART 32
 #define BLOOMSIZE 8192
 #define TUPLESIZE 20
+#define BLOOMBIT BLOOMSIZE * 8
+#define BITREADER 1
 
 #define MAGIC 0xFF
 #define MAXSTAMP __UINT64_MAX__

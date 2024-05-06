@@ -23,7 +23,7 @@ namespace cached
         bool *cacheFile(FILE *stream);
         bool getRange(uint64_t timeStamp, uint64_t &max, uint64_t &min, uint64_t &size); // 返回值为是否缓存了这个文件头
         void sortSST();
-        bool fetchData(uint64_t timeStamp, bool *bloom, uint64_t *infoPtr);
+        bool fetchData(uint64_t timeStamp, bool **bloom, uint64_t *infoPtr);
         ~CachedSST();
     };
 }

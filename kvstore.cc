@@ -112,7 +112,7 @@ void KVStore::createSSTable()
 	if (!utils::dirExists(rootPath + "level0"))
 		utils::_mkdir(rootPath + "level0");
 	oss << path << "level0/" << timeStamp << ".sst";
-	FILE *sst = fopen(oss.str().c_str(), "w");
+	FILE *sst = fopen(oss.str().c_str(), "w+");
 	if (sst == NULL)
 	{
 		printf("open sst wrong\n");
@@ -122,7 +122,7 @@ void KVStore::createSSTable()
 	// fwrite SSTable header
 	SSTableHead(sst);
 	filter.reset();
-	filter.set(caches.cacheFile(sst), BLOOMSIZE);
+	// filter.set(caches.cacheFile(sst), BLOOMSIZE);
 
 	// write SSTable Main Content(tuples)
 	fseek(sst, KEYSTART, SEEK_SET);
@@ -139,7 +139,7 @@ void KVStore::createSSTable()
 
 	// store bloomFilter ahead of the content
 	fwrite(filter.bloomVec, 1, FILTERSIZE, sst);
-
+	caches.cacheFile(sst);
 	// close the sstable file;
 	fclose(sst);
 
@@ -196,7 +196,7 @@ uint64_t KVStore::get(FILE *sstable, uint64_t key, uint64_t maxHeader, std::stri
 		return maxHeader;
 
 	bool *bloomArray;
-	caches.fetchData(header, bloomArray, nullptr);
+	caches.fetchData(header, &bloomArray, nullptr);
 
 	filter.set(bloomArray, FILTERSIZE);
 	if (filter.query(key))

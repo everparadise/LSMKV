@@ -1,10 +1,6 @@
+
 #include "MurmurHash3.h"
 #include <iostream>
-
-// bloomFilter类只进行filter操作，不对指针进行操作
-// 对bloomVec的创建、删除均在CachedData中完成
-// 在需要filter时从CachedData中得到bloomVec，在bloomFilter中判断
-
 class bloomFilter
 {
     int hashNum;
@@ -17,45 +13,77 @@ public:
     bloomFilter(int k_input, int m_input, int seed_input = 1) : hashNum(k_input), n(0), size(m_input)
     {
         seed = seed_input;
-        bloomVec = new bool[size]{false};
+        bloomVec = nullptr;
     }
     ~bloomFilter()
     {
+        delete[] bloomVec;
     }
     void reset()
     {
-        bloomVec = nullptr;
+        n = 0;
+        delete[] bloomVec;
+        bloomVec = new bool[size];
     }
     bool query(uint64_t target)
     {
-        for (uint32_t i = 0; i < hashNum; i++)
+        uint32_t hash[4] = {0};
+        uint32_t times = 0;
+        while (true)
         {
-            int index = filterHash(target, i + 1);
-            if (!bloomVec[index])
-                return false;
+            if (times >= hashNum)
+                return true;
+            MurmurHash3_x64_128(&target, sizeof(target), seed * hash[0], hash);
+            for (int i = 0; i < 4; i++, times++)
+            {
+                if (!getBit(hash[i] % BLOOMBIT))
+                    return false;
+                else if (times >= hashNum)
+                    return true;
+            }
         }
-        return true;
     }
     void insert(uint64_t target)
     {
         if (!bloomVec)
             bloomVec = new bool[size];
         n++;
-        for (uint32_t i = 0; i < hashNum; i++)
+        uint32_t hash[4] = {0};
+        uint32_t times = 0;
+        while (true)
         {
-            int index = filterHash(target, i + 1);
-            bloomVec[index] = true;
+            if (times >= hashNum)
+                return;
+            MurmurHash3_x64_128(&target, sizeof(target), seed * hash[0], hash);
+            for (int i = 0; i < 4; i++, times++)
+            {
+                if (times < hashNum)
+                    setBit(hash[i] % BLOOMBIT);
+                else
+                    return;
+            }
         }
     }
-    int filterHash(uint64_t key, uint32_t seedInput)
-    {
-        uint64_t hash[2] = {0};
-        MurmurHash3_x64_128(&key, sizeof(key), seed * seedInput, hash);
-        return hash[0] % size;
-    }
+
     void set(bool *array, uint64_t size)
     {
+        n = 0;
+        if (bloomVec)
+            delete[] bloomVec;
         bloomVec = array;
         bloomFilter::size = size;
+    }
+
+    bool getBit(int index)
+    {
+        int outerIndex = index / 8;
+        int innerIndex = index % 8;
+        return (bloomVec[outerIndex] >> innerIndex) & BITREADER;
+    }
+    void setBit(int index)
+    {
+        int outerIndex = index / 8;
+        int innerIndex = index % 8;
+        bloomVec[outerIndex] = bloomVec[outerIndex] | (BITREADER << innerIndex);
     }
 };
