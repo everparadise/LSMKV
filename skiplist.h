@@ -62,6 +62,10 @@ namespace skiplist
         // std::optional<value_type> get(key_type key) const;
         std::string get(key_type key) const;
 
+        node *getHeader()
+        {
+            return header;
+        }
         int getNum();
         void scan(key_type key1, key_type key2, std::map<uint64_t, std::string> &map, std::unordered_map<uint64_t, uint64_t> &hashMap);
         ~skiplist_type();

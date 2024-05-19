@@ -3,10 +3,10 @@
 #include <iostream>
 class bloomFilter
 {
-    int hashNum;
-    int n;
-    int size;
-    int seed;
+    static const int hashNum;
+    static const int n;
+    static const int size;
+    static const int seed;
 
 public:
     bool *bloomVec;
@@ -25,7 +25,7 @@ public:
         delete[] bloomVec;
         bloomVec = new bool[size];
     }
-    bool query(uint64_t target)
+    static bool query(uint64_t target)
     {
         uint32_t hash[4] = {0};
         uint32_t times = 0;
@@ -43,7 +43,7 @@ public:
             }
         }
     }
-    void insert(uint64_t target)
+    static void insert(uint64_t target)
     {
         if (!bloomVec)
             bloomVec = new bool[size];
