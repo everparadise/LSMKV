@@ -1,3 +1,4 @@
+#pragma once
 #include <fstream>
 #include <memory>
 #include <stdio.h>
@@ -16,13 +17,17 @@ namespace disk
         std::string path;
         FILE *fp;
         static std::unique_ptr<VLog> instance;
-        VLog(std::string &&name)
+        VLog(std::string &&name, bool needScan = false)
         {
             path = std::move(name);
-            fp = fopen(path.c_str(), "w");
+            if (needScan)
+            {
+                initialScan();
+            }
+            else
+                fp = fopen(path.c_str(), "w");
 
             opened = true;
-            initialScan();
         }
 
         ~VLog()
@@ -31,18 +36,20 @@ namespace disk
         }
         // to do
         // 启动时扫描初始化
-        void initialScan();
+        void initialScan()
+        {
+        }
         // 周期执行gc
         void gc();
 
     public:
         VLog(const VLog &) = delete;
         VLog &operator=(const VLog &) = delete;
-        static void initialize(std::string &&name)
+        static void initialize(std::string &&name, bool needScan = false)
         {
             if (!instance)
             {
-                VLog::instance = std::make_unique<VLog>(new VLog(name));
+                VLog::instance = std::make_unique<VLog>(new VLog(name, needScan));
             }
         }
         static VLog &getInstance(std::string &&name = NULL)
@@ -59,6 +66,13 @@ namespace disk
         {
         }
 
+        void reset()
+        {
+            fp = fopen(path.c_str(), "w+");
+            header = 0;
+            tail = 0;
+        }
+
         bool get(std::string queryString, uint64_t offset, uint64_t vlen)
         {
             fseek(fp, offset, SEEK_SET);
@@ -67,12 +81,12 @@ namespace disk
             queryString.assign(valueChar);
         }
 
-        std::vector<std::tuple<uint64_t, uint64_t, uint32_t>> put(skiplist::skiplist_type &skiplist)
+        std::vector<dataTuple> put(memtable *skiplist)
         {
-            std::vector<std::tuple<uint64_t, uint64_t, uint32_t>> tuples;
+            std::vector<dataTuple> tuples;
             fseek(fp, header, SEEK_SET);
 
-            skiplist::skiplist_type::node *curr = skiplist.getHeader;
+            memtable::node *curr = skiplist->getHeader;
             curr = curr->forward[1];
             off_t start = ftell(fp);
             char magic = MAGIC;

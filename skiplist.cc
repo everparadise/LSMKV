@@ -117,4 +117,19 @@ namespace skiplist
             curr = curr->forward[1];
         }
     }
+
+    void skiplist_type::flush()
+    {
+        node *curr = header->forward[1];
+        do
+        {
+            node *tmp = curr;
+            curr = curr->forward[1];
+            delete tmp;
+        } while (curr);
+
+        totalLevel = 0;
+        nodeNum = 0;
+        return;
+    }
 } // namespace skiplist

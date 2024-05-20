@@ -8,24 +8,14 @@
 #include "define.h"
 #include <map>
 #include <unordered_map>
-namespace VLog
-{
-    class VLog;
-}
-
-class KVStore;
-
 namespace skiplist
 {
 
     using key_type = uint64_t;
-    // using value_type = std::vector<char>;
     using value_type = std::string;
 
     class skiplist_type
     {
-        friend class VLog::VLog;
-        friend class ::KVStore;
         // add something here
         int totalLevel;
         int maxLevel;
@@ -59,7 +49,6 @@ namespace skiplist
     public:
         explicit skiplist_type(double p = 0.5);
         void put(key_type key, const value_type &val);
-        // std::optional<value_type> get(key_type key) const;
         std::string get(key_type key) const;
 
         node *getHeader()
@@ -68,9 +57,10 @@ namespace skiplist
         }
         int getNum();
         void scan(key_type key1, key_type key2, std::map<uint64_t, std::string> &map, std::unordered_map<uint64_t, uint64_t> &hashMap);
+        void flush();
         ~skiplist_type();
     };
 
-} // namespace skiplist
+}
 
 #endif // SKIPLIST_H

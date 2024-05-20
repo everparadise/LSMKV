@@ -9,6 +9,8 @@
 #include <vector>
 #include <tuple>
 #include "template.cc"
+#include <cstring>
+#include "utils.h"
 namespace SST
 {
 
@@ -118,6 +120,7 @@ namespace SST
 
     public:
         std::string secName;
+        const char *fileName;
 
         uint64_t maxKey;
         uint64_t minKey;
@@ -125,14 +128,55 @@ namespace SST
         uint64_t numbers;
 
         bool *bloom;
-        Section(std::string &&name, memtable list, uint32_t timeStamp)
+
+        void reset()
+        {
+            delete bloom;
+            closeFile();
+            utils::rmfile(secName);
+        }
+        Section(std::string &&name, uint64_t &timeStamp)
+        {
+            this->secName = std::move(name);
+            fileName = secName.c_str();
+            file = fopen(fileName, "r");
+            scanHeader();
+
+            timeStamp = this->timeStamp;
+            fclose(file);
+            open = false;
+        }
+
+        void scanHeader()
+        {
+            fread(&timeStamp, 8, 1, file);
+            fread(&numbers, 8, 1, file);
+            fread(&minKey, 8, 1, file);
+            fread(&maxKey, 8, 1, file);
+            fread(bloom, BLOOMSIZE, 1, file);
+        }
+
+        Section(std::string &&rootName, memtable *list, uint64_t timeStamp)
         {
             this->secName = std::move(name);
             this->timeStamp = timeStamp;
             bloom = nullptr;
             open = false;
 
-            file = fopen(secName.c_str, "w");
+            int i = 0;
+            while (true)
+            {
+                std::string loopName = this->secName + std::to_string(i);
+                if (!(file = fopen(loopName.c_str(), "r")))
+                {
+                    this->secName = std::move(loopName);
+                    fileName = this->secName.c_str();
+                }
+                fclose(file);
+                i++;
+            }
+
+            file = fopen(fileName, "w");
             disk::VLog &vlog = disk::VLog::getInstance();
             auto ret = vlog.put(list);
 
@@ -249,7 +293,7 @@ namespace SST
         {
             if (!open)
             {
-                fopen(secName.c_str(), "w+");
+                fopen(fileName, "w+");
                 open = true;
             }
         }
@@ -258,7 +302,7 @@ namespace SST
         {
             if (!open)
             {
-                fopen(secName.c_str(), "w+");
+                fopen(fileName, "w+");
                 open = true;
             }
             return file;
