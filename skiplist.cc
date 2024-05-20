@@ -113,23 +113,26 @@ namespace skiplist
         while (curr && curr->key <= key2)
         {
             map[curr->key] = curr->value;
-            hashMap[curr->key] = MAXSTAMP;
+            hashMap[curr->key] = Config::maxTimeStamp;
             curr = curr->forward[1];
         }
     }
 
-    void skiplist_type::flush()
-    {
-        node *curr = header->forward[1];
-        do
-        {
-            node *tmp = curr;
-            curr = curr->forward[1];
-            delete tmp;
-        } while (curr);
-
-        totalLevel = 0;
-        nodeNum = 0;
-        return;
-    }
+    // void skiplist_type::flush()
+    // {
+    //     node *curr = header->forward[1];
+    //     for (int i = 1; i < totalLevel; i++)
+    //     {
+    //         header->forward[i] = nullptr;
+    //     }
+    //     while (curr)
+    //     {
+    //         node *tmp = curr;
+    //         curr = curr->forward[1];
+    //         delete tmp;
+    //     }
+    //     totalLevel = 0;
+    //     nodeNum = 0;
+    //     return;
+    // }
 } // namespace skiplist

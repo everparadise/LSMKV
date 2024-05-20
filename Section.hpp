@@ -1,14 +1,13 @@
 #pragma once
-
 #include <inttypes.h>
 #include <string>
 #include <fstream>
 #include "bloomFilter.h"
 #include "skiplist.h"
-#include "VLog.h"
+#include "VLog.hpp"
 #include <vector>
 #include <tuple>
-#include "template.cc"
+#include "template.hpp"
 #include <cstring>
 #include "utils.h"
 namespace SST
@@ -28,9 +27,8 @@ namespace SST
             fwrite(&numbers, 8, 1, file);
 
             // 极小键， 极大键
-            uint64_t ignore1, ignore2;
-            auto [min, ignore1, ignore2] = tuples[0];
-            auto [max, ignore3, ignore4] = tuples[numbers - 1];
+            auto min = std::get<0>(tuples[0]);
+            auto max = std::get<0>(tuples[numbers - 1]);
             minKey = min;
             maxKey = max;
             fwrite(&minKey, 8, 1, file);
@@ -39,9 +37,9 @@ namespace SST
         void createSSTBody(std::vector<dataTuple> &tuples)
         {
             // filter.set(caches.cacheFile(sst), BLOOMSIZE);
-            bloom = new bool[BLOOMSIZE];
+            bloom = new unsigned char[Config::filterSize];
             // write SSTable Main Content(tuples)
-            fseek(file, KEYSTART, SEEK_SET);
+            fseek(file, Config::keyStart, SEEK_SET);
 
             for (auto it : tuples)
             {
@@ -51,34 +49,33 @@ namespace SST
                 fwrite(&offset, 8, 1, file);
                 fwrite(&vlen, 4, 1, file);
             }
-            fseek(file, BLOOMSTART, SEEK_SET);
+            fseek(file, Config::bloomStart, SEEK_SET);
 
             // store bloomFilter ahead of the content
-            fwrite(bloom, 1, FILTERSIZE, file);
+            fwrite(bloom, Config::filterSize, 1, file);
             // close the sstable file;
         }
 
         bool innerGet(std::string &queryString, uint64_t key)
         {
-            char tuples[numbers * TUPLESIZE + 1];
-            fseek(file, KEYSTART, SEEK_SET);
-            fread(tuples, 1, numbers * TUPLESIZE, file);
+            char tuples[numbers * Config::tupleSize + 1];
+            fseek(file, Config::keyStart, SEEK_SET);
+            fread(tuples, 1, numbers * Config::tupleSize, file);
             uint64_t lp = 0, rp = numbers - 1;
             while (lp <= rp)
             {
                 uint64_t mid = (lp + rp) / 2;
-                uint64_t currKey = *reinterpret_cast<uint64_t *>(tuples + mid * TUPLESIZE);
+                uint64_t currKey = *reinterpret_cast<uint64_t *>(tuples + mid * Config::tupleSize);
                 if (currKey == key)
                 {
-                    uint64_t offset = *reinterpret_cast<uint64_t *>(tuples + mid * TUPLESIZE + 8);
-                    uint32_t vlen = *reinterpret_cast<uint32_t *>(tuples + mid * TUPLESIZE + 16);
+                    uint64_t offset = *reinterpret_cast<uint64_t *>(tuples + mid * Config::tupleSize + 8);
+                    uint32_t vlen = *reinterpret_cast<uint32_t *>(tuples + mid * Config::tupleSize + 16);
                     if (vlen == 0)
                     {
-                        queryString.clear();
                         return true;
                     }
                     auto vlog = disk::VLog::getInstance();
-                    vlog.get(queryString, offset, vlen);
+                    vlog->get(queryString, offset, vlen);
                     return true;
                 }
                 else if (currKey < key)
@@ -102,7 +99,7 @@ namespace SST
             auto vlog = disk::VLog::getInstance();
             for (; lp <= rp; lp++)
             {
-                uintPtr = reinterpret_cast<uint64_t *>(charArray + lp * TUPLESIZE);
+                uintPtr = reinterpret_cast<uint64_t *>(charArray + lp * Config::tupleSize);
                 currKey = *uintPtr;
                 auto it = hashMap.find(currKey);
                 if (it != hashMap.end() && it->second < timeStamp || it == hashMap.end())
@@ -111,9 +108,8 @@ namespace SST
                     keyOff = uintPtr[1];
                     keyLen = *reinterpret_cast<uint32_t *>(uintPtr + 2);
                     std::string str;
-                    vlog.get(str, keyOff, keyLen);
-                    get(str, keyOff, keyLen);
-                    map[currKey] = str;
+                    vlog->get(str, keyOff, keyLen);
+                    map[currKey] = std::move(str);
                 }
             }
         }
@@ -127,7 +123,7 @@ namespace SST
         uint64_t timeStamp;
         uint64_t numbers;
 
-        bool *bloom;
+        unsigned char *bloom;
 
         void reset()
         {
@@ -137,6 +133,7 @@ namespace SST
         }
         Section(std::string &&name, uint64_t &timeStamp)
         {
+            bloom = new unsigned char[Config::filterSize];
             this->secName = std::move(name);
             fileName = secName.c_str();
             file = fopen(fileName, "r");
@@ -153,12 +150,13 @@ namespace SST
             fread(&numbers, 8, 1, file);
             fread(&minKey, 8, 1, file);
             fread(&maxKey, 8, 1, file);
-            fread(bloom, BLOOMSIZE, 1, file);
+            fread(bloom, Config::filterSize, 1, file);
         }
 
         Section(std::string &&rootName, memtable *list, uint64_t timeStamp)
         {
-            this->secName = std::move(name);
+            // rootName格式为相对根目录路径 + "/timeStamp"
+            this->secName = std::move(rootName);
             this->timeStamp = timeStamp;
             bloom = nullptr;
             open = false;
@@ -166,19 +164,21 @@ namespace SST
             int i = 0;
             while (true)
             {
-                std::string loopName = this->secName + std::to_string(i);
+                std::string loopName = this->secName + "-" + std::to_string(i);
                 if (!(file = fopen(loopName.c_str(), "r")))
                 {
                     this->secName = std::move(loopName);
                     fileName = this->secName.c_str();
+                    break;
                 }
-                fclose(file);
+                else
+                    fclose(file);
                 i++;
             }
 
-            file = fopen(fileName, "w");
-            disk::VLog &vlog = disk::VLog::getInstance();
-            auto ret = vlog.put(list);
+            file = fopen(fileName, "w+");
+            disk::VLog *vlog = disk::VLog::getInstance();
+            auto ret = vlog->put(list);
 
             createSSTHead(ret);
             createSSTBody(ret);
@@ -212,9 +212,9 @@ namespace SST
             // make sure target key may exist in this file
             if (minKey > key2 || maxKey < key1)
                 return;
-            fseek(file, KEYSTART, SEEK_SET);
-            char KVPairs[TUPLESIZE * numbers + 1];
-            fread(KVPairs, 1, TUPLESIZE * numbers, file);
+            fseek(file, Config::keyStart, SEEK_SET);
+            char KVPairs[Config::tupleSize * numbers + 1];
+            fread(KVPairs, 1, Config::tupleSize * numbers, file);
             uint64_t lp = 0, rp = numbers - 1;
             uint64_t mid;
             if (key1 > minKey)
@@ -223,7 +223,7 @@ namespace SST
                 while (lp < tmprp)
                 {
                     mid = (lp + tmprp) / 2;
-                    uint64_t currKey = *reinterpret_cast<uint64_t *>(KVPairs + TUPLESIZE * mid);
+                    uint64_t currKey = *reinterpret_cast<uint64_t *>(KVPairs + Config::tupleSize * mid);
                     if (currKey < key1)
                         lp = mid + 1;
                     else if (currKey > key1)
@@ -243,7 +243,7 @@ namespace SST
                 while (tmplp < rp)
                 {
                     mid = (tmplp + rp) / 2;
-                    uint64_t currKey = *reinterpret_cast<uint64_t *>(KVPairs + TUPLESIZE * mid);
+                    uint64_t currKey = *reinterpret_cast<uint64_t *>(KVPairs + Config::tupleSize * mid);
                     if (currKey > key2)
                         rp = mid - 1;
                     else if (currKey < key2)
@@ -261,11 +261,11 @@ namespace SST
             if (rp < lp)
                 return;
 
-            scan(KVPairs, timeStamp, lp, rp, map, hashMap);
+            innerScan(KVPairs, timeStamp, lp, rp, map, hashMap);
             closeFile();
         }
 
-        static bool compareSection(Section &sec1, Section &sec2)
+        static bool compareSection(const Section &sec1, const Section &sec2)
         {
             if (sec1.timeStamp != sec2.timeStamp)
             {
@@ -293,7 +293,7 @@ namespace SST
         {
             if (!open)
             {
-                fopen(fileName, "w+");
+                file = fopen(fileName, "r");
                 open = true;
             }
         }
@@ -302,7 +302,7 @@ namespace SST
         {
             if (!open)
             {
-                fopen(fileName, "w+");
+                file = fopen(fileName, "r");
                 open = true;
             }
             return file;

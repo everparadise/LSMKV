@@ -4,24 +4,23 @@
 #include "utils.h"
 #include <fstream>
 #include <stdio.h>
-#include "VLog.h"
+#include "VLog.hpp"
 #include "bloomFilter.h"
-#include "define.h"
 #include <unordered_map>
 #include <map>
-#include "SST.cc"
+#include "SST.hpp"
 #include <string>
-#include "template.cc"
+#include "template.hpp"
 // the max num of memtab node when it reaches 16kb after transfering to SSTable
 
 class KVStore : public KVStoreAPI
 {
 	std::string rootPath;
+	std::string vlogPath;
 	uint64_t timeStamp;
 	// You can add your implementation here
 	memtable *memtab;
 	SST::SSTManager sstManager;
-	disk::VLog vlog;
 	void storeMem();
 
 public:

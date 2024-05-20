@@ -1,5 +1,6 @@
-#include "Section.cc"
-#include "Level.cc"
+#pragma once
+#include "Section.hpp"
+#include "Level.hpp"
 #include "skiplist.h"
 #include "utils.h"
 #include <list>
@@ -7,10 +8,11 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
-#include "template.cc"
-#include "compaction.cc"
+#include "template.hpp"
+#include "compaction.hpp"
 namespace SST
 {
+
     class SSTManager
     {
         std::string path;
@@ -25,7 +27,7 @@ namespace SST
             level = 0;
             for (auto it = levels.begin(); it != levels.end();)
             {
-                (*it).reset();
+                it->reset();
                 it = levels.erase(it);
             }
         }
@@ -41,34 +43,35 @@ namespace SST
             if (utils::dirExists(this->path))
             {
                 std::vector<std::string> fileVec;
-                int size = utils::scanDir(this.path, fileVec);
+                int size = utils::scanDir(this->path, fileVec);
                 uint64_t maxHeader = 0;
-
                 for (int i = 0; i < size; i++)
                 {
-                    int currNumber;
-                    levels.emplace_back(i, this->path + fileVec[i] + "/", true, currNumber);
+                    uint64_t currNumber;
+                    int levelNum;
+                    if ((levelNum = checkLevelValid(fileVec[i])) == -1)
+                        continue;
+                    levels.emplace_back(levelNum, this->path + fileVec[i] + "/", true, &currNumber);
                     currTimeStamp = currNumber > currTimeStamp ? currNumber : currTimeStamp;
                     level = i;
                 }
                 return;
             }
             else
-                mkdir(path.c_str());
-
-            levels.emplace_back(0, this->path + "level0/");
+                utils::mkdir(path);
         }
 
-        void createSection(memtable &list)
+        void createSection(memtable *list)
         {
             if (level == 0)
             {
-                levels.emplace_back(level, path + std::to_string(level) + "/");
+                utils::mkdir(path + "level-0");
+                levels.emplace_back(level, path + "level-0/");
                 level++;
             }
 
             std::vector<Level>::iterator it = levels.begin();
-            if ((*it).createSection(list, currTimeStamp))
+            if (it->createSection(list, currTimeStamp))
             {
                 while (true)
                 {
@@ -79,7 +82,7 @@ namespace SST
                         level++;
                     }
 
-                    if (!Compact::compactionContext::compact(it, next))
+                    if (!Compact::compactionContext::compact(*it, *next))
                     {
                         break;
                     }
@@ -94,7 +97,7 @@ namespace SST
         {
             for (auto it : levels)
             {
-                if (it.get(key, queryString))
+                if (it.get(queryString, key))
                     return true;
             }
             return false;
@@ -107,6 +110,21 @@ namespace SST
                 it.scan(key1, key2, map, hashMap);
             }
         }
-    }
+
+        int checkLevelValid(std::string &dirName)
+        {
+            if (dirName.size() < 7)
+                return -1;
+            try
+            {
+                int res = std::stoi(dirName.substr(6));
+                return res;
+            }
+            catch (const std::invalid_argument &e)
+            {
+                return -1;
+            }
+        }
+    };
 
 }

@@ -1,3 +1,0 @@
-/home/kxzhang/senior_dataStructure/proj/LSMKV.handout/LSMKV.handout/build/CMakeFiles/correctness.dir
-/home/kxzhang/senior_dataStructure/proj/LSMKV.handout/LSMKV.handout/build/CMakeFiles/edit_cache.dir
-/home/kxzhang/senior_dataStructure/proj/LSMKV.handout/LSMKV.handout/build/CMakeFiles/rebuild_cache.dir

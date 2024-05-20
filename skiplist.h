@@ -5,15 +5,35 @@
 // #include <optional>
 // #include <vector>
 #include <string>
-#include "define.h"
+#include "config.hpp"
 #include <map>
 #include <unordered_map>
+
 namespace skiplist
 {
-
     using key_type = uint64_t;
     using value_type = std::string;
-
+    struct node
+    {
+        node **forward;
+        int level;
+        key_type key;
+        value_type value;
+        node(key_type keyInput, value_type valueInput, int level) : key(keyInput), value(valueInput)
+        {
+            forward = new node *[level + 1];
+            for (int i = 0; i <= level; i++)
+            {
+                forward[i] = nullptr;
+            }
+        }
+        ~node()
+        {
+            if (forward)
+                delete[] forward;
+            forward = nullptr;
+        }
+    };
     class skiplist_type
     {
         // add something here
@@ -22,27 +42,6 @@ namespace skiplist
         int nodeNum;
         double p;
 
-        struct node
-        {
-            node **forward;
-            int level;
-            key_type key;
-            value_type value;
-            node(key_type keyInput, value_type valueInput, int level) : key(keyInput), value(valueInput)
-            {
-                forward = new node *[level + 1];
-                for (int i = 0; i <= level; i++)
-                {
-                    forward[i] = nullptr;
-                }
-            }
-            ~node()
-            {
-                if (forward)
-                    delete[] forward;
-                forward = nullptr;
-            }
-        };
         node *header;
         int randomLevel();
 
