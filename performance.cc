@@ -97,48 +97,55 @@ int main()
         store.del(i);
         delCost[i] = timer.end();
     }
-    printf("finish del\n");
-    printf("--------------start statistic output----------------\n");
+    // printf("finish del\n");
+    // printf("--------------start statistic output----------------\n");
     {
 
         // put
         std::ofstream of(Config::put);
+        uint64_t totalLatency = 0;
         for (int i = 0; i < LARGE_TEST_MAX; i++)
         {
             of << i << "," << putCost[i] << "\n";
+            totalLatency += putCost[i];
         }
+        totalLatency /= LARGE_TEST_MAX;
+        printf("operation put:\n");
+        printf("avg latency: %ld ns\n", totalLatency);
+        printf("avg throughput: %ld\n\n", 1000000000 / totalLatency);
         of.close();
 
         // scan
         of.open(Config::scan);
+        totalLatency = 0;
         for (int i = 0; i < 100; i++)
         {
             of << i << "," << scanCost[i] << "\n";
+            totalLatency += scanCost[i];
         }
-
+        totalLatency /= LARGE_TEST_MAX;
+        printf("operation scan\n");
+        printf("avg latency: %ld ns\n", totalLatency);
+        printf("avg throughput: %ld\n\n", 1000000000 / totalLatency);
         of.close();
 
         // sequencial get
         of.open(Config::sequencialGet);
-        if (!of)
-        {
-            printf("wrong\n");
-            exit(0);
-        }
+        totalLatency = 0;
         for (int i = 0; i < LARGE_TEST_MAX; i++)
         {
             of << i << "," << sequencialGetCost[i] << "\n";
+            totalLatency += sequencialGetCost[i];
         }
+        totalLatency /= LARGE_TEST_MAX;
+        printf("operation get\n");
+        printf("avg latency: %ld ns\n", totalLatency);
+        printf("avg throughput: %ld\n\n", 1000000000 / totalLatency);
 
         of.close();
 
         // out of order get
         of.open(Config::OutOfOrderGet);
-        if (!of)
-        {
-            printf("wrong\n");
-            exit(0);
-        }
         for (int i = 0; i < LARGE_TEST_MAX; i++)
         {
             of << i << "," << OutOfOrderGetCost[i] << "\n";
@@ -147,25 +154,32 @@ int main()
         of.close();
 
         // random get
-        of.open(Config::randomGet);
-        if (!of)
-        {
-            printf("wrong\n");
-            exit(0);
-        }
+        totalLatency = 0;
         for (int i = 0; i < LARGE_TEST_MAX; i++)
         {
             of << i << "," << randomGetCost[i] << "\n";
+            totalLatency += randomGetCost[i];
         }
+        totalLatency /= LARGE_TEST_MAX;
+        printf("operation random get\n");
+        printf("avg latency: %ld ns\n", totalLatency);
+        printf("avg throughput: %ld\n\n", 1000000000 / totalLatency);
 
         of.close();
 
         // del
+        totalLatency = 0;
         of.open(Config::del);
         for (int i = 0; i < LARGE_TEST_MAX; i++)
         {
             of << i << "," << delCost[i] << "\n";
+            totalLatency += delCost[i];
         }
+
+        totalLatency /= LARGE_TEST_MAX;
+        printf("operation del\n");
+        printf("avg latency: %ld ns\n", totalLatency);
+        printf("avg throughput: %ld\n\n", 1000000000 / totalLatency);
     }
     printf("finish static output\n");
 }

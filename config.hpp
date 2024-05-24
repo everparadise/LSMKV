@@ -3,7 +3,7 @@
 #include <string>
 namespace Config
 {
-    static constexpr const bool cacheBody = false;
+    static constexpr const bool cacheBody = true;
     static constexpr const bool cacheBloom = true;
 
     static constexpr const char *VLogPath = "./";

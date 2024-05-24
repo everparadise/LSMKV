@@ -58,6 +58,20 @@ namespace SST
 
             // store bloomFilter ahead of the content
             fwrite(bloom, Config::filterSize, 1, file);
+            if (Config::cacheBody)
+            {
+                cacheBody = new unsigned char[numbers * Config::tupleSize + 1];
+                uint64_t read = fread(cacheBody, 1, numbers * Config::tupleSize, file);
+                if (read != numbers * Config::tupleSize)
+                {
+                    printf("read wrong\n");
+                }
+            }
+            if (!Config::cacheBloom)
+            {
+                delete bloom;
+                bloom = nullptr;
+            }
             // close the sstable file;
         }
 
@@ -197,8 +211,16 @@ namespace SST
         }
         void reset()
         {
-            delete bloom;
-            bloom = nullptr;
+            if (bloom)
+            {
+                delete[] bloom;
+                bloom = nullptr;
+            }
+            if (cacheBody)
+            {
+                delete[] cacheBody;
+                cacheBody = nullptr;
+            }
             closeFile();
             utils::rmfile(secName);
         }
@@ -213,7 +235,7 @@ namespace SST
             bloom = nullptr;
             this->secName = std::move(name);
             fileName = secName.c_str();
-            file = fopen(fileName, "r");
+            file = fopen(fileName, "rb");
             scanCache();
 
             timeStamp = this->timeStamp;
@@ -260,7 +282,7 @@ namespace SST
             while (true)
             {
                 std::string loopName = this->secName + "-" + std::to_string(i);
-                if (!(file = fopen(loopName.c_str(), "r")))
+                if (!(file = fopen(loopName.c_str(), "rb")))
                 {
                     this->secName = std::move(loopName);
                     fileName = this->secName.c_str();
@@ -271,7 +293,7 @@ namespace SST
                 i++;
             }
 
-            file = fopen(fileName, "w+");
+            file = fopen(fileName, "wb+");
             disk::VLog *vlog = disk::VLog::getInstance();
             auto ret = vlog->put(list);
 
@@ -293,7 +315,7 @@ namespace SST
             while (true)
             {
                 std::string loopName = this->secName + "-" + std::to_string(i);
-                if (!(file = fopen(loopName.c_str(), "r")))
+                if (!(file = fopen(loopName.c_str(), "rb")))
                 {
                     this->secName = std::move(loopName);
                     fileName = this->secName.c_str();
@@ -304,7 +326,7 @@ namespace SST
                 i++;
             }
 
-            file = fopen(fileName, "w+");
+            file = fopen(fileName, "wb+");
 
             createSSTHead(tuples);
             createSSTBody(tuples);
@@ -329,6 +351,7 @@ namespace SST
 
             openFile();
             bloom = new unsigned char[Config::filterSize];
+            fseek(file, Config::bloomStart, SEEK_SET);
             fread(bloom, Config::filterSize, 1, file);
             if (!bloomFilter::query(bloom, key))
             {
@@ -361,6 +384,7 @@ namespace SST
 
             openFile();
             bloom = new unsigned char[Config::filterSize];
+            fseek(file, Config::bloomStart, SEEK_SET);
             fread(bloom, Config::filterSize, 1, file);
             if (!bloomFilter::query(bloom, key))
             {
@@ -484,7 +508,7 @@ namespace SST
         {
             if (!file)
             {
-                file = fopen(fileName, "r");
+                file = fopen(fileName, "rb");
             }
             else
                 fseek(file, 0, SEEK_SET);
@@ -494,7 +518,7 @@ namespace SST
         {
             if (!file)
             {
-                file = fopen(fileName, "r");
+                file = fopen(fileName, "rb");
             }
             else
                 fseek(file, 0, SEEK_SET);
