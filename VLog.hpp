@@ -7,11 +7,15 @@
 #include <tuple>
 #include "template.hpp"
 #include "config.hpp"
-
+#include <iostream>
+class KVStore;
 namespace disk
 {
+
     class VLog
     {
+        friend class ::KVStore;
+
         uint64_t header;
         uint64_t tail;
         bool opened;
@@ -23,7 +27,10 @@ namespace disk
         {
 
             path = name;
-            fp = fopen(path.c_str(), "w");
+            if (!(fp = fopen(path.c_str(), "r+")))
+            {
+                fp = fopen(path.c_str(), "w+");
+            }
 
             opened = true;
         }
@@ -36,21 +43,78 @@ namespace disk
         // scan file when initializing
         void initialScan()
         {
-        }
-        // invoke periodicly to clean garbage data
-        void gc()
-        {
+            fseek(fp, 0, SEEK_END);
+            header = ftell(fp);
+            if (header == 0)
+            {
+                tail = 0;
+                return;
+            }
+
+            off_t pos = utils::seek_data_block(path);
+            beginScan(pos);
         }
         // check crc to ensure data completeness
-        bool crcCheck()
+        void beginScan(uint64_t pos)
         {
-            return true;
+            fseek(fp, pos, SEEK_SET);
+
+            unsigned char *buffer = new unsigned char[Config::scanSize];
+            int index = 0;
+            bool find = false;
+            while (!find && !feof(fp))
+            {
+                fseek(fp, pos + index * Config::scanSize, SEEK_SET);
+                fread(buffer, Config::scanSize, 1, fp);
+
+                for (uint64_t i = 0; i < Config::scanSize; i++)
+                {
+                    if (buffer[i] == Config::magic)
+                    {
+                        if (crcCheck(index * Config::scanSize + i + pos))
+                        {
+                            tail = index * Config::scanSize + i + pos;
+                            find = true;
+                            break;
+                        }
+                    }
+                }
+                index++;
+            }
+            delete[] buffer;
+
+            if (feof(fp) && !find)
+            {
+                std::cerr << "vlog wrong format!\n"
+                          << std::endl;
+
+                exit(0);
+            }
+        }
+
+        bool crcCheck(uint64_t pos)
+        {
+            fseek(fp, pos, SEEK_SET);
+            unsigned char metaData[Config::entryMetaData];
+            fread(metaData, Config::entryMetaData, 1, fp);
+            uint16_t vlogCrc = *(uint16_t *)(metaData + 1);
+
+            uint32_t vlen = *(uint32_t *)(metaData + 11);
+
+            unsigned char *valueChar = new unsigned char[vlen];
+            fread(valueChar, vlen, 1, fp);
+
+            std::vector<unsigned char> vec(metaData + 3, metaData + 15);
+            vec.insert(vec.end(), valueChar, valueChar + vlen);
+            uint16_t calculateCrc = utils::crc16(vec);
+            delete valueChar;
+            return calculateCrc == vlogCrc;
         }
 
     public:
         VLog(const VLog &) = delete;
         VLog &operator=(const VLog &) = delete;
-        static void initialize(std::string &name, bool needScan = false)
+        static void initialize(std::string &name)
         {
             if (instance == nullptr)
             {
@@ -58,7 +122,7 @@ namespace disk
                 instance->initialScan();
             }
         }
-        static VLog *getInstance(std::string *stringPtr = nullptr)
+        static VLog *getInstance()
         {
             if (instance == nullptr)
             {
@@ -66,10 +130,6 @@ namespace disk
                 exit(0);
             }
             return instance;
-        }
-
-        void log(const std::string &message)
-        {
         }
 
         void reset()
@@ -83,10 +143,16 @@ namespace disk
         bool get(std::string &queryString, uint64_t offset, uint64_t vlen)
         {
             fseek(fp, offset, SEEK_SET);
-            char valueChar[vlen + 1];
-            fread(valueChar, 1, vlen, fp);
+            char *valueChar = new char[vlen + 1];
+            size_t result = fread(valueChar, 1, vlen, fp);
+            if (result != vlen)
+            {
+                if (ferror(fp))
+                    printf("wrong file\n");
+            }
             valueChar[vlen] = '\0';
             queryString.assign(valueChar);
+            delete[] valueChar;
             return true;
         }
 
@@ -97,12 +163,8 @@ namespace disk
 
             skiplist::node *curr = skiplist->getHeader();
             curr = curr->forward[1];
-            off_t start = ftell(fp);
-            fseek(fp, 3, SEEK_CUR);
 
-            uint64_t totalLength;
-
-            off64_t offset = -1;
+            off64_t offset = header;
             while (curr)
             {
 
@@ -114,36 +176,35 @@ namespace disk
                     continue;
                 }
 
-                uint32_t length = curr->value.length();
+                uint32_t currLength;
+                std::vector<unsigned char> data = catKVData(key, curr->value, currLength);
+                uint16_t crcCheck = utils::crc16(data);
 
-                fwrite(&key, 8, 1, fp);
-                fwrite(&length, 4, 1, fp);
-                if (offset == -1)
-                {
-                    offset = ftell(fp);
-                }
-                else
-                {
-                    offset += 12;
-                }
-                fwrite(curr->value.c_str(), length, 1, fp);
-                tuples.emplace_back(key, offset, length);
-                offset += length;
-                totalLength += 12 + length;
+                tuples.emplace_back(key, offset + Config::entryMetaData, currLength - Config::entryKVLength);
+                fwrite(&Config::magic, 1, 1, fp);
+                fwrite(&crcCheck, Config::crcCheckSize, 1, fp);
+                fwrite(data.data(), currLength, 1, fp);
+
+                offset += currLength + Config::entryHeadLength;
                 curr = curr->forward[1];
             }
-            header = (offset == -1 ? ftell(fp) : offset);
-            fseek(fp, start + 3, SEEK_SET);
-            // char ptr[totalLength + 1];
-            // fread(ptr, totalLength, 1, vLog);
-            // std::vector<unsigned char> crcData(ptr, ptr + totalLength + 1);
-            // uint16_t crc16 = utils::crc16(crcData);
-            fseek(fp, start, SEEK_SET);
-            fwrite(&Config::magic, 1, 1, fp);
-            // fwrite(reinterpret_cast<char *>(&crc16), 2, 1, vLog);
-
-            fseek(fp, 0, SEEK_END);
+            header = offset;
             return tuples;
+        }
+
+        std::vector<unsigned char> catKVData(uint64_t key, std::string &value, uint32_t &totalLength)
+        {
+            uint32_t size = value.size();
+            unsigned char *res = new unsigned char[Config::entryKVLength + size + 1];
+            *(uint64_t *)res = key;
+            *(uint32_t *)(res + Config::keySize) = size;
+            memcpy(res + Config::entryKVLength, value.data(), size);
+            res[Config::entryKVLength + size] = '\0';
+            totalLength = Config::entryKVLength + size;
+
+            std::vector<unsigned char> data(res, res + totalLength);
+            delete[] res;
+            return data;
         }
     };
 }

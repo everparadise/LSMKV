@@ -57,6 +57,7 @@ namespace skiplist
         int getNum();
         void scan(key_type key1, key_type key2, std::map<uint64_t, std::string> &map, std::unordered_map<uint64_t, uint64_t> &hashMap);
         void flush();
+        bool query(uint64_t key);
         ~skiplist_type();
     };
 

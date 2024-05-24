@@ -65,6 +65,24 @@ namespace skiplist
         }
         delete[] update;
     }
+
+    bool skiplist_type::query(uint64_t key)
+    {
+        node *curr = header;
+        for (int i = totalLevel; i > 0; i--)
+        {
+            while (curr->forward[i] && curr->forward[i]->key < key)
+            {
+                curr = curr->forward[i];
+            }
+        }
+        if (curr->forward[1] && curr->forward[1]->key == key)
+        {
+            return true;
+        }
+        return false;
+    }
+
     std::string skiplist_type::get(key_type key) const
     {
         node *curr = header;

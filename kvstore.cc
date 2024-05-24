@@ -8,7 +8,7 @@ KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(d
 	// the naive implementation need to be completed
 	timeStamp = 1;
 	memtab = new skiplist::skiplist_type(Config::prob);
-
+	log = logger::getInstance();
 	rootPath = dir;
 	vlogPath = vlog;
 	if (!utils::dirExists(rootPath))
@@ -18,13 +18,20 @@ KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(d
 	try
 	{
 		sstManager.initialize(rootPath + "/");
-		disk::VLog::initialize(vlogPath, true);
+		disk::VLog::initialize(vlogPath);
 	}
 	catch (std::string message)
 	{
 		printf("path fault\n");
 		printf("%s\n", message.c_str());
 		exit(0);
+	}
+
+	std::vector<KVPair> tuple = log->reflog();
+
+	for (auto &it : tuple)
+	{
+		put(it.first, it.second);
 	}
 }
 
@@ -41,10 +48,12 @@ KVStore::~KVStore()
  */
 void KVStore::put(uint64_t key, const std::string &s)
 {
+	log->log(std::to_string(key) + " " + s);
 	memtab->put(key, s);
 	if (memtab->getNum() == Config::sstMax)
 	{
 		storeMem();
+		log->flush();
 	}
 }
 
@@ -75,6 +84,12 @@ std::string KVStore::get(uint64_t key)
 	return value;
 }
 
+uint64_t KVStore::getOffset(uint64_t key)
+{
+	if (memtab->query(key))
+		return -1;
+	return sstManager.getOffset(key);
+}
 /**
  * Delete the given key-value pair if it exists.
  * Returns false iff the key is not found.
@@ -98,6 +113,7 @@ void KVStore::reset()
 	sstManager.reset();
 	auto vlogInstance = disk::VLog::getInstance();
 	vlogInstance->reset();
+	log->flush();
 }
 
 /**
@@ -138,4 +154,51 @@ void KVStore::scan(uint64_t key1, uint64_t key2, std::list<std::pair<uint64_t, s
  */
 void KVStore::gc(uint64_t chunk_size)
 {
+	disk::VLog *vlog = disk::VLog::getInstance();
+
+	uint64_t collectSize = 0;
+
+	FILE *fp = vlog->fp;
+	uint64_t tail = vlog->tail;
+	fseek(fp, tail, SEEK_SET);
+	char metaHeader[Config::entryMetaData];
+	while (collectSize < chunk_size)
+	{
+		// value offset
+		uint64_t offset = tail + collectSize + Config::entryMetaData;
+		// magic crc key
+		fseek(fp, collectSize + tail, SEEK_SET);
+		fread(metaHeader, Config::entryMetaData, 1, fp);
+
+		uint64_t key = *(uint64_t *)(metaHeader + Config::entryHeadLength);
+		uint32_t vlen = *(uint32_t *)(metaHeader + Config::metaVlenPos);
+		if (getOffset(key) == offset)
+		{
+			char storeValue[vlen + 1];
+			fread(storeValue, vlen, 1, fp);
+			storeValue[vlen] = '\0';
+			std::string value(storeValue);
+			put(key, std::move(value));
+		}
+		else
+		{
+			fseek(fp, vlen, SEEK_CUR);
+		}
+
+		collectSize += vlen + Config::entryMetaData;
+	}
+	if (memtab->getNum() != 0)
+		storeMem();
+
+	utils::de_alloc_file(vlog->path, tail, collectSize);
+	vlog->tail += collectSize;
+	// 本轮扫描vlog大小
+
+	// 扫描vLog头部的vlog entry
+	// 使用entry的key在LSM中查找最新记录，比较是否指向该entry
+	// 如果是则重新插入memtable
+	// 如果不是则不做处理
+
+	// 强制flush memtable
+	// 对扫描过的区域打洞
 }

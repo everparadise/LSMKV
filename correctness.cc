@@ -40,8 +40,7 @@ private:
 		phase();
 
 		// Test scan
-		std::list<std::pair<uint64_t, std::string>>
-			list_ans;
+		std::list<std::pair<uint64_t, std::string>> list_ans;
 		std::list<std::pair<uint64_t, std::string>> list_stu;
 
 		for (i = 0; i < max / 2; ++i)
@@ -91,106 +90,106 @@ private:
 		report();
 	}
 
-	// void gc_test(uint64_t max)
-	// {
-	// 	uint64_t i;
-	// 	uint64_t gc_trigger = 1024;
+	void gc_test(uint64_t max)
+	{
+		uint64_t i;
+		uint64_t gc_trigger = 1024;
 
-	// 	for (i = 0; i < max; ++i)
-	// 	{
-	// 		store.put(i, std::string(i + 1, 's'));
-	// 	}
+		for (i = 0; i < max; ++i)
+		{
+			store.put(i, std::string(i + 1, 's'));
+		}
 
-	// 	for (i = 0; i < max; ++i)
-	// 	{
-	// 		EXPECT(std::string(i + 1, 's'), store.get(i));
-	// 		switch (i % 3)
-	// 		{
-	// 		case 0:
-	// 			store.put(i, std::string(i + 1, 'e'));
-	// 			break;
-	// 		case 1:
-	// 			store.put(i, std::string(i + 1, '2'));
-	// 			break;
-	// 		case 2:
-	// 			store.put(i, std::string(i + 1, '3'));
-	// 			break;
-	// 		default:
-	// 			assert(0);
-	// 		}
+		for (i = 0; i < max; ++i)
+		{
+			EXPECT(std::string(i + 1, 's'), store.get(i));
+			switch (i % 3)
+			{
+			case 0:
+				store.put(i, std::string(i + 1, 'e'));
+				break;
+			case 1:
+				store.put(i, std::string(i + 1, '2'));
+				break;
+			case 2:
+				store.put(i, std::string(i + 1, '3'));
+				break;
+			default:
+				assert(0);
+			}
 
-	// 		if (i % gc_trigger == 0) [[unlikely]]
-	// 		{
-	// 			check_gc(16 * MB);
-	// 		}
-	// 	}
+			if (i % gc_trigger == 0) [[unlikely]]
+			{
+				check_gc(16 * MB);
+			}
+		}
 
-	// 	phase();
+		phase();
 
-	// 	for (i = 0; i < max; ++i)
-	// 	{
-	// 		switch (i % 3)
-	// 		{
-	// 		case 0:
-	// 			EXPECT(std::string(i + 1, 'e'), store.get(i));
-	// 			break;
-	// 		case 1:
-	// 			EXPECT(std::string(i + 1, '2'), store.get(i));
-	// 			break;
-	// 		case 2:
-	// 			EXPECT(std::string(i + 1, '3'), store.get(i));
-	// 			break;
-	// 		default:
-	// 			assert(0);
-	// 		}
-	// 	}
+		for (i = 0; i < max; ++i)
+		{
+			switch (i % 3)
+			{
+			case 0:
+				EXPECT(std::string(i + 1, 'e'), store.get(i));
+				break;
+			case 1:
+				EXPECT(std::string(i + 1, '2'), store.get(i));
+				break;
+			case 2:
+				EXPECT(std::string(i + 1, '3'), store.get(i));
+				break;
+			default:
+				assert(0);
+			}
+		}
 
-	// 	phase();
+		phase();
 
-	// 	for (i = 1; i < max; i += 2)
-	// 	{
-	// 		EXPECT(true, store.del(i));
+		for (i = 1; i < max; i += 2)
+		{
+			EXPECT(true, store.del(i));
 
-	// 		if ((i - 1) % gc_trigger == 0) [[unlikely]]
-	// 		{
-	// 			check_gc(8 * MB);
-	// 		}
-	// 	}
+			if ((i - 1) % gc_trigger == 0) [[unlikely]]
+			{
+				check_gc(8 * MB);
+			}
+		}
 
-	// 	for (i = 0; i < max; i += 2)
-	// 	{
-	// 		switch (i % 3)
-	// 		{
-	// 		case 0:
-	// 			EXPECT(std::string(i + 1, 'e'), store.get(i));
-	// 			break;
-	// 		case 1:
-	// 			EXPECT(std::string(i + 1, '2'), store.get(i));
-	// 			break;
-	// 		case 2:
-	// 			EXPECT(std::string(i + 1, '3'), store.get(i));
-	// 			break;
-	// 		default:
-	// 			assert(0);
-	// 		}
+		for (i = 0; i < max; i += 2)
+		{
+			switch (i % 3)
+			{
+			case 0:
+				EXPECT(std::string(i + 1, 'e'), store.get(i));
+				break;
+			case 1:
+				EXPECT(std::string(i + 1, '2'), store.get(i));
+				break;
+			case 2:
+				EXPECT(std::string(i + 1, '3'), store.get(i));
+				break;
+			default:
+				assert(0);
+			}
 
-	// 		store.del(i);
+			store.del(i);
 
-	// 		if (((i - 1) / 2) % gc_trigger == 0) [[unlikely]]
-	// 		{
-	// 			check_gc(32 * MB);
-	// 		}
-	// 	}
+			if (((i - 1) / 2) % gc_trigger == 0) [[unlikely]]
+			{
+				check_gc(32 * MB);
+			}
+		}
 
-	// 	for (i = 0; i < max; ++i)
-	// 	{
-	// 		EXPECT(not_found, store.get(i));
-	// 	}
+		for (i = 0; i < max; ++i)
+		{
+			EXPECT(not_found, store.get(i));
+		}
 
-	// 	phase();
+		phase();
 
-	// 	report();
-	// }
+		report();
+	}
 
 public:
 	CorrectnessTest(const std::string &dir, const std::string &vlog, bool v = true) : Test(dir, vlog, v)
@@ -213,8 +212,8 @@ public:
 
 		store.reset();
 
-		// std::cout << "[GC Test]" << std::endl;
-		// gc_test(GC_TEST_MAX);
+		std::cout << "[GC Test]" << std::endl;
+		gc_test(GC_TEST_MAX);
 	}
 };
 

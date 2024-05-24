@@ -11,6 +11,7 @@
 #include "SST.hpp"
 #include <string>
 #include "template.hpp"
+#include "logger.hpp"
 // the max num of memtab node when it reaches 16kb after transfering to SSTable
 
 class KVStore : public KVStoreAPI
@@ -22,6 +23,8 @@ class KVStore : public KVStoreAPI
 	memtable *memtab;
 	SST::SSTManager sstManager;
 	void storeMem();
+	uint64_t getOffset(uint64_t key);
+	logger *log;
 
 public:
 	KVStore(const std::string &dir, const std::string &vlog);

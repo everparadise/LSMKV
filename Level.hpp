@@ -25,7 +25,6 @@ namespace SST
                 return Section::compareSection(sec1, sec2);
             }
         };
-        std::vector<Section> sections;
 
     public:
         void reset()
@@ -39,10 +38,11 @@ namespace SST
             level = 0;
             numbers = 0;
         }
-
+        std::vector<Section> sections;
         Level(int levelInput, std::string &&path, bool needScan = false, uint64_t *maxTimeStamp = nullptr)
         {
             this->level = levelInput;
+
             numbers = 1;
             for (int i = 0; i <= levelInput; i++)
             {
@@ -66,12 +66,14 @@ namespace SST
                             *maxTimeStamp = timeStamp;
                     }
                     std::sort(sections.begin(), sections.end(), Section::compareSection);
-
-                    return;
                 }
                 else
                     utils::mkdir(this->path);
+
+                return;
             }
+
+            utils::mkdir(this->path);
         }
         int getLevel()
         {
@@ -81,6 +83,14 @@ namespace SST
         {
             sections.emplace_back(path + std::to_string(timeStamp), list, timeStamp);
             return sections.size() > numbers;
+        }
+
+        void createSection(std::vector<dataTuple> &tuples, uint64_t timeStamp)
+        {
+            while (tuples.size() != 0)
+            {
+                sections.emplace_back(path + std::to_string(timeStamp), tuples, timeStamp);
+            }
         }
 
         bool get(std::string &queryString, uint64_t key)
@@ -93,6 +103,16 @@ namespace SST
             return false;
         }
 
+        uint64_t getOffset(uint64_t key)
+        {
+            for (std::vector<Section>::reverse_iterator it = sections.rbegin(); it != sections.rend(); it++)
+            {
+                uint64_t offset = it->getOffset(key);
+                if (offset != -1)
+                    return offset;
+            }
+            return -1;
+        }
         void scan(uint64_t key1, uint64_t key2, KVMap &map, KVHash &hashMap)
         {
             for (std::vector<Section>::reverse_iterator it = sections.rbegin(); it != sections.rend(); it++)
@@ -113,6 +133,16 @@ namespace SST
                 return false;
 
             return true;
+        }
+
+        std::string getName()
+        {
+            return path;
+        }
+
+        int getNumber()
+        {
+            return numbers;
         }
     };
 

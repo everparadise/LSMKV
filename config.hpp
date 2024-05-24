@@ -3,15 +3,15 @@
 #include <string>
 namespace Config
 {
+    static constexpr const bool cacheBody = false;
+    static constexpr const bool cacheBloom = true;
+
     static constexpr const char *VLogPath = "./";
     static constexpr const char *SSTRootPath = "./data";
 
     // memtable
     static constexpr double prob = 0.25;
     static constexpr uint64_t maxTimeStamp = __UINT64_MAX__;
-
-    // sst
-    static constexpr uint32_t sstMax = 408;
 
     // bloomFilter
     static constexpr int hashnum = 8;
@@ -24,24 +24,32 @@ namespace Config
 
     // vlog
     static constexpr unsigned char magic = 0xFF;
+    // magic + checksum
+    static constexpr int entryHeadLength = 3;
+    // key + vlen
+    static constexpr int entryKVLength = 12;
+    static constexpr int entryMetaData = entryHeadLength + entryKVLength;
     static constexpr int tupleSize = 20;
+    static constexpr int vlenSize = 4;
+    static constexpr int keySize = 8;
+    static constexpr int crcCheckSize = 2;
+    static constexpr int metaVlenPos = entryHeadLength + keySize;
 
-    // disk::VLog *disk::VLog::instance = nullptr;
-    //      class FileManager
-    //  {
+    // sst
+    static constexpr int sstSize = 16 * 1024;
+    static constexpr uint32_t sstMax = (sstSize - filterSize - bloomStart) / tupleSize;
 
-    //     static constexpr std::string rootPath = "";
-    //     FileManager()
-    //     {
-    //     }
+    // initial scan
+    static constexpr const int scanSize = 4096;
 
-    // public:
-    //     FileManager(const FileManager &) = delete;
-    //     FileManager &operator=(const FileManager &) = delete;
+    // log
+    static const std::string logPath = "./data/log";
 
-    //     static FileManager &getInstance()
-    //     {
-    //         static FileManager instance;
-    //     }
-    // };
+    // performance
+    static const std::string sequencialGet = "./performanceStas/get_sequence.csv";
+    static const std::string OutOfOrderGet = "./performanceStas/get_outOrder.csv";
+    static const std::string randomGet = "./performanceStas/get_random.csv";
+    static const std::string put = "./performanceStas/put.csv";
+    static const std::string scan = "./performanceStas/scan.csv";
+    static const std::string del = "./performanceStas/del.csv";
 }

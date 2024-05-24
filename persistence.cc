@@ -38,16 +38,17 @@ public:
 		phase();
 
 		// Test deletions
+		bool flag;
 		for (i = 0; i < TEST_MAX; i += 2)
 		{
-			EXPECT(true, store.del(i));
+			bool flag = store.del(i);
+			EXPECT(true, flag);
 
 			if ((i / 2) % GC_TRIGGER == 0) [[unlikely]]
 			{
 				check_gc(16 * MB);
 			}
 		}
-
 		// Prepare data for Test Mode
 		for (i = 0; i < TEST_MAX; ++i)
 		{
@@ -62,6 +63,7 @@ public:
 				store.put(i, std::string(i + 1, 't'));
 				break;
 			case 2:
+
 				EXPECT(not_found, store.get(i));
 				break;
 			case 3:
