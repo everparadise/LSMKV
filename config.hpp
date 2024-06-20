@@ -3,7 +3,7 @@
 #include <string>
 namespace Config
 {
-    static constexpr const bool cacheBody = false;
+    static constexpr const bool cacheBody = true;
     static constexpr const bool cacheBloom = true;
 
     static constexpr const char *VLogPath = "./";
@@ -15,7 +15,7 @@ namespace Config
 
     // bloomFilter
     static constexpr int hashnum = 8;
-    static constexpr int filterSize = 8192;
+    static constexpr int filterSize = 8192 + 4096;
     static constexpr int seed = 1;
     static constexpr int bloomBit = filterSize * 8;
     static constexpr unsigned char bitReader = 0x01;
