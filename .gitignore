@@ -1,0 +1,7 @@
+build/*
+data/*
+**.out
+correctness
+performance
+persistence
+
