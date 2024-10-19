@@ -15,7 +15,7 @@ namespace Config
 
     // bloomFilter
     static constexpr int hashnum = 8;
-    static constexpr int filterSize = 8192 + 4096;
+    static constexpr int filterSize = 8192;
     static constexpr int seed = 1;
     static constexpr int bloomBit = filterSize * 8;
     static constexpr unsigned char bitReader = 0x01;

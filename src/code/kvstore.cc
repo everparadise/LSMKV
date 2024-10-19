@@ -202,3 +202,8 @@ void KVStore::gc(uint64_t chunk_size)
 	// 强制flush memtable
 	// 对扫描过的区域打洞
 }
+
+int KVStore::add(int arg1, int arg2)
+{
+	return arg1 + arg2;
+}

@@ -27,15 +27,28 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 add_compile_options(-Wall )
 
 # set executable location
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/..)
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/..)
+
+# set include_directories
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/external
+)
 
 # add source file
-set(SOURCES_FILES kvstore.cc skiplist.cc VLog.cc logger.cc)
+set(SOURCES_FILES 
+    src/code/kvstore.cc 
+    src/code/skiplist.cc 
+    src/code/VLog.cc 
+    src/code/logger.cc)
 
 # build executable
-add_executable(correctness correctness.cc ${SOURCES_FILES})
-add_executable(persistence persistence.cc ${SOURCES_FILES})
-add_executable(performance performance.cc ${SOURCES_FILES})
+add_executable(correctness src/benchmark/correctness.cc ${SOURCES_FILES})
+add_executable(persistence src/benchmark/persistence.cc ${SOURCES_FILES})
+add_executable(performance src/benchmark/performance.cc ${SOURCES_FILES})
 
 message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+
+enable_testing()
+add_subdirectory(test)
