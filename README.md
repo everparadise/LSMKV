@@ -1,7 +1,7 @@
 # LSMKV
 **LSM Tree**(Log-Structured Merge Tree) is a kind of Key-Value Storage Structure designed to handle a high volumn of write operations efficiently. It was introduced in 1996 by Patrick O'Neil and others in a seminal paper.
 
-Today, this data structure is widely used in DBSM. Google’s LevelDB and Facebook’s RocksDB are both built around the LSM Tree as their core data structure. 
+Today, this data structure is widely used in DBMS. Google’s LevelDB and Facebook’s RocksDB are both built around the LSM Tree as their core data structure. 
 
 In 2016, a paper by Lanyue Lu and colleagues, titled Wisckey, proposed an optimization for the LSM Tree, addressing the long-standing issue of write amplification through a technique called **key-value separation**. 
 
