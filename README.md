@@ -64,13 +64,13 @@ source file is **src/benchmark/performance.cc**
 
 ### Performance of different caching method
 <p align="center">
-<img src="https://github.com/user-attachments/assets/7e1efa08-4296-4d6d-b6e2-113cc027ea76" width=100% height=100% 
+<img src="https://github.com/user-attachments/assets/7e1efa08-4296-4d6d-b6e2-113cc027ea76" width=40% height=40% 
 class="center">
 </p>
 
 ### Performance of different bloom filter size
 <p align="center">
-<img src="https://github.com/user-attachments/assets/01984777-672a-4458-99c8-419db59756aa" width=100% height=100% 
+<img src="https://github.com/user-attachments/assets/01984777-672a-4458-99c8-419db59756aa" width=40% height=40% 
 class="center">
 </p>
 
